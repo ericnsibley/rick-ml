@@ -1,0 +1,28 @@
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.DO_SSH_KEY }}
+
+      - name: Deploy to droplet
+        run: |
+          echo "Deploying to droplet"
+          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          ssh root@${{ secrets.DO_DROPLET_IP }} << 'EOF'
+            cd rick-ml/
+            git pull origin master
+            docker compose pull
+            docker compose up -d --build
+            docker system prune -a --volumes --force
+          EOF
